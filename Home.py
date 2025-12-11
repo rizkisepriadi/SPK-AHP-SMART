@@ -1,49 +1,123 @@
 import streamlit as st
-from st_supabase_connection import SupabaseConnection
-st_supabase = st.connection(
-    name="supabase_connection",
-    type=SupabaseConnection,
-    ttl=None,  # cache indefinitely; override when you need fresher data
+import pandas as pd
+from datetime import datetime
+import auth
+
+# Initialize authentication state first
+auth.initialize_auth_state()
+
+# Page config
+st.set_page_config(
+    page_title="AHP-SMART System",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="collapsed" if not auth.is_authenticated() else "expanded"
 )
 
-# Example: list buckets without re-authenticating on every rerun
-buckets = st_supabase.list_buckets()
-# st.write(buckets)
+# Hide sidebar on login page
+if not auth.is_authenticated():
+    st.markdown("""
+        <style>
+            [data-testid="collapsedControl"] {
+                display: none
+            }
+            section[data-testid="stSidebar"] {
+                display: none;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-st.set_page_config(page_title="AHP-SMART Admin", layout="wide")
 
-# ================= LOGIN SYSTEM ===================
-ADMIN_USER = "admin"
-ADMIN_PASS = "12345"
-
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-# ================= LOGIN PAGE =====================
 def login_page():
-    st.title("🔒 Login Admin")
-    st.write("Masukkan username dan password untuk melanjutkan.")
+    """Display login page"""
+    # Center the login form
+    st.markdown("""
+        <style>
+            .block-container {
+                max-width: 600px;
+                padding-top: 5rem;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.subheader("AHP-SMART Method")
+    
+    tab1, tab2 = st.tabs(["Login", "Registrasi"])
+    
+    with tab1:
+        st.markdown("### Login ke Akun Anda")
+        
+        with st.form("login_form", clear_on_submit=False):
+            email = st.text_input("Email", placeholder="email@example.com")
+            password = st.text_input("Password", type="password", placeholder="Masukkan password")
+            submit = st.form_submit_button("Login", use_container_width=True)
+            
+            if submit:
+                if not email or not password:
+                    st.error("⚠️ Email dan password harus diisi!")
+                else:
+                    with st.spinner("Sedang login..."):
+                        success, error_msg = auth.sign_in(email, password)
+                        
+                        if success:
+                            st.success("✅ Login berhasil!")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {error_msg}")
+    
+    with tab2:
+        st.markdown("### Buat Akun Baru")
+        
+        with st.form("register_form", clear_on_submit=True):
+            reg_name = st.text_input("Nama Lengkap", placeholder="Masukkan nama lengkap")
+            reg_email = st.text_input("Email", placeholder="email@example.com", key="reg_email")
+            reg_password = st.text_input("Password", type="password", placeholder="Min. 6 karakter", key="reg_password")
+            reg_password_confirm = st.text_input("Konfirmasi Password", type="password", placeholder="Ketik ulang password")
+            
+            submit_register = st.form_submit_button("Daftar", use_container_width=True)
+            
+            if submit_register:
+                if not all([reg_name, reg_email, reg_password, reg_password_confirm]):
+                    st.error("⚠️ Semua field harus diisi!")
+                elif reg_password != reg_password_confirm:
+                    st.error("⚠️ Password tidak cocok!")
+                elif len(reg_password) < 6:
+                    st.error("⚠️ Password minimal 6 karakter!")
+                else:
+                    with st.spinner("Sedang mendaftarkan akun..."):
+                        user_metadata = {
+                            'fname': reg_name,
+                            'full_name': reg_name
+                        }
+                        # auto_login=True untuk langsung login setelah registrasi
+                        success, error_msg = auth.sign_up(reg_email, reg_password, user_metadata, auto_login=True)
+                        
+                        if success:
+                            st.success("✅ Registrasi berhasil! Mengalihkan ke dashboard...")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {error_msg}")
 
-    user = st.text_input("Username")
-    pw = st.text_input("Password", type="password")
 
-    if st.button("Login"):
-        if user == ADMIN_USER and pw == ADMIN_PASS:
-            st.session_state.logged_in = True
-            st.success("Login berhasil!")
-            # gunakan st.rerun() karena st.experimental_rerun mungkin tidak ada di versi Streamlit kamu
-            try:
-                st.rerun()
-            except Exception:
-                # hanya untuk berjaga-jaga: jika rerun juga tidak tersedia, lakukan nothing
-                pass
-        else:
-            st.error("Username atau password salah.")
-
-# ================= DASHBOARD PAGE ==================
 def dashboard_page():
+    """Display main dashboard for authenticated users"""
+    # Get user info using helper functions
+    user_email = auth.get_user_email()
+    user_name = auth.get_user_metadata('fname', auth.get_user_metadata('full_name', 'User'))
+    
+    # Sidebar
+    with st.sidebar:
+        if st.button("Logout", use_container_width=True):
+            success, error_msg = auth.sign_out()
+            if success:
+                st.success("Berhasil logout!")
+                st.rerun()
+            else:
+                st.error(f"Logout gagal: {error_msg}")
+    
+    # Main content
     st.title("📊 Dashboard Admin AHP-SMART")
-    st.header("selamat datang, admin!")
+    st.markdown(f"### Selamat datang, {user_name}! 👋")
 
     # ---- METRIC BOXES ----
     col1, col2, col3 = st.columns(3)
@@ -60,7 +134,6 @@ def dashboard_page():
         st.subheader("⚙️ Kelola Data")
         st.write("Kriteria, Sub-kriteria, Alternatif.")
         if st.button("Buka Data Kriteria"):
-            # gunakan try/except karena st.switch_page tidak ada di semua versi streamlit
             try:
                 st.switch_page("pages/1_Data_Kriteria.py")
             except Exception:
@@ -86,15 +159,15 @@ def dashboard_page():
 
     st.divider()
 
-    if st.button("Logout"):
-        st.session_state.logged_in = False
-        try:
-            st.rerun()
-        except Exception:
-            pass
 
-# ============== ROUTING ===========================
-if not st.session_state.logged_in:
-    login_page()
-else:
-    dashboard_page()
+def main():
+    """Main application logic"""
+    # Check authentication
+    if not auth.is_authenticated():
+        login_page()
+    else:
+        dashboard_page()
+
+
+if __name__ == "__main__":
+    main()
