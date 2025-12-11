@@ -113,7 +113,7 @@ M_display = M.applymap(lambda x: str(int(x)) if x.is_integer() else str(x))
 st.session_state.pairwise = M_display
 
 # ====================== SIMPAN ======================
-if st.button("💾 Simpan Matriks ke Supabase"):
+if st.button("💾 Simpan Matriks ke Database"):
     try:
         st_supabase.table("tb_kriteria").delete().neq("id", 0).execute()
 

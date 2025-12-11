@@ -12,36 +12,35 @@ if "alternatif" not in st.session_state:
         ]
     })
 
-
 # ============ HEADER + TOMBOL TAMBAH ==============
-col1, col2 = st.columns([4,1])
+col1, col2 = st.columns([3,1])
 
 with col1:
     st.subheader("Daftar Alternatif")
 
 with col2:
-    tambah = st.button("Tambah Data")
+    show_add = st.toggle("➕ Tambah Data")  # ganti modal dengan toggle
 
 
-# ============ POPUP TAMBAH DATA ==================
-if tambah:
-    with st.modal("Tambah Alternatif Baru"):
-        new_name = st.text_input("Nama Alternatif")
+# ============ FORM TAMBAH DATA (EXPANDER) ===========
+if show_add:
+    with st.expander("Form Tambah Alternatif", expanded=True):
+        new_name = st.text_input("Nama Alternatif Baru")
+
         if st.button("Simpan"):
-            if new_name.strip() != "":
-                # Tambahkan ke DataFrame
+            if new_name.strip() == "":
+                st.error("Nama alternatif tidak boleh kosong.")
+            else:
+                # Tambah data
                 new_row = pd.DataFrame({"Alternatif": [new_name]})
                 st.session_state.alternatif = pd.concat(
                     [st.session_state.alternatif, new_row],
                     ignore_index=True
                 )
-                st.success("Data berhasil ditambahkan!")
+                st.success("Alternatif berhasil ditambahkan!")
                 st.rerun()
-            else:
-                st.error("Nama alternatif tidak boleh kosong.")
 
-
-# ============ EDITOR UTAMA (HANYA 1 TABEL) ============
+# ============ TABLE DATA EDITOR (TANPA DUPLIKAT) ============
 edited = st.data_editor(
     st.session_state.alternatif,
     num_rows="dynamic"
