@@ -1,30 +1,9 @@
 import streamlit as st
 import pandas as pd
-import sys
-from pathlib import Path
-
-parent_dir = str(Path(__file__).parent.parent)
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
-
-import auth
-
-auth.initialize_auth_state()
-
-auth.require_auth()
-
-# Sidebar
-with st.sidebar:
-        if st.button("Logout", use_container_width=True):
-            success, error_msg = auth.sign_out()
-            if success:
-                st.success("Berhasil logout!")
-                st.rerun()
-            else:
-                st.error(f"Logout gagal: {error_msg}")
 
 st.title("3. Data Alternatif (Supplier)")
 
+# ============ INITIAL DATA ===============
 if "alternatif" not in st.session_state:
     st.session_state.alternatif = pd.DataFrame({
         "Alternatif": [
@@ -33,8 +12,38 @@ if "alternatif" not in st.session_state:
         ]
     })
 
-edited = st.data_editor(st.session_state.alternatif, num_rows="dynamic")
-st.session_state.alternatif = edited
+# ============ HEADER + TOMBOL TAMBAH ==============
+col1, col2 = st.columns([3,1])
 
-st.subheader("Daftar Alternatif:")
-st.table(edited)
+with col1:
+    st.subheader("Daftar Alternatif")
+
+with col2:
+    show_add = st.toggle("➕ Tambah Data")  # ganti modal dengan toggle
+
+
+# ============ FORM TAMBAH DATA (EXPANDER) ===========
+if show_add:
+    with st.expander("Form Tambah Alternatif", expanded=True):
+        new_name = st.text_input("Nama Alternatif Baru")
+
+        if st.button("Simpan"):
+            if new_name.strip() == "":
+                st.error("Nama alternatif tidak boleh kosong.")
+            else:
+                # Tambah data
+                new_row = pd.DataFrame({"Alternatif": [new_name]})
+                st.session_state.alternatif = pd.concat(
+                    [st.session_state.alternatif, new_row],
+                    ignore_index=True
+                )
+                st.success("Alternatif berhasil ditambahkan!")
+                st.rerun()
+
+# ============ TABLE DATA EDITOR (TANPA DUPLIKAT) ============
+edited = st.data_editor(
+    st.session_state.alternatif,
+    num_rows="dynamic"
+)
+
+st.session_state.alternatif = edited
