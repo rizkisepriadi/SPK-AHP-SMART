@@ -151,10 +151,15 @@ else:
     RI = {1:0.0, 2:0.0, 3:0.58, 4:0.90, 5:1.12}
     CR = CI / RI.get(n, 1.12)
 
-    st.table(pd.DataFrame({
+
+    df_result = pd.DataFrame({
         "Kriteria": st.session_state.kriteria,
         "Bobot": [round(w, 4) for w in priority]
-    }))
+    })
+    df_result.index = df_result.index + 1  
+    st.table(df_result)
+
+    st.session_state.bobot_ahp = [round(w, 4) for w in priority]
 
     st.write(f"λ Max = {lambda_max:.4f}")
     st.write(f"CI = {CI:.4f}")

@@ -26,7 +26,7 @@ with st.sidebar:
 
 st.title("5. Perhitungan AHP + SMART")
 
-if "weights" not in st.session_state:
+if "kriteria" not in st.session_state or not st.session_state.kriteria:
     st.error("Hitung bobot AHP terlebih dahulu pada halaman Data Kriteria.")
     st.stop()
 
@@ -34,7 +34,11 @@ if "penilaian" not in st.session_state:
     st.error("Isi Data Penilaian terlebih dahulu.")
     st.stop()
 
-weights = st.session_state.weights
+if "bobot_ahp" not in st.session_state:
+    st.error("Hitung bobot AHP terlebih dahulu pada halaman Data Kriteria.")
+    st.stop()
+
+weights = st.session_state.bobot_ahp.copy()
 pen = st.session_state.penilaian.copy()
 
 norm = pen.copy()
@@ -50,7 +54,7 @@ for col in ["Kualitas","Fleksibilitas","Pelayanan"]:
     norm[col] = (v - v.min()) / (v.max() - v.min())
 
 criteria = ["Harga","Kualitas","Pengiriman","Fleksibilitas","Pelayanan"]
-w = np.array([weights[c] for c in criteria])
+w = np.array(weights)
 
 scores = (norm[criteria].values * w).sum(axis=1)
 
